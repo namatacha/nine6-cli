@@ -5,9 +5,11 @@ This program is still in alpha version, bugs may occurred.
 
 ## Features
 
-⦿ Code Highlight\n
-⦿ AI generated text is formatted into human readable text\n
-⦿ AI thinking animation\n
+⦿ Code Highlight
+
+⦿ AI generated text is formatted into human readable text
+
+⦿ AI thinking animation
 
 More Features Coming Soon.
 
