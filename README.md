@@ -1,6 +1,7 @@
 # Nine6 CLI
 
-Nine6 CLI is an opensource ai chatting program, and this program is CLI, so you need to run it on your terminal!.
+Nine6 CLI is an opensource ai chatting program, and this program is CLI, so you need to run it on your terminal!
+
 This program is still in alpha version, bugs may occurred.
 
 ## Features
