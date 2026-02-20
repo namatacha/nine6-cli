@@ -1,6 +1,15 @@
 # Nine6 CLI
 
 Nine6 CLI is an opensource ai chatting program, and this program is CLI, so you need to run it on your terminal!.
+This program is still in alpha version, bugs may occurred.
+
+## Features
+
+⦿ Code Highlight
+⦿ AI generated text is formatted into human readable text
+⦿ AI thinking animation
+
+More Features Coming Soon.
 
 ## Usage
 
