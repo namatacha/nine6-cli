@@ -24,23 +24,6 @@ MEMORY_FILE = "memory.json"
 PROMPT = "prompt.txt"
 initial_data = None
 
-def smart_display(text):
-    parts = re.split(r'```(\w+)?\n?(.*?)```', text, flags=re.DOTALL)
-    i = 0
-    while i < len(parts):
-        content = parts[i]
-
-        if i % 3 == 0:
-            if content.strip():
-                typing_print(content)
-            i += 1
-        else:
-            lang = parts[i] if parts[i] else "python"
-            code_content = parts[i+1]
-            syntax = Syntax(code_content.strip(), lang, theme="monokai", line_numbers=False)
-            console.print(syntax)
-            i += 2
-
 class colors:
     black = "\033[0;30m"
     red = "\033[0;31m"
@@ -71,13 +54,12 @@ class func:
 {colors.white}██║╚████║██║██║╚████║██╔══╝{colors.purple}░░██╔══██╗{colors.reset}
 {colors.white}██║░╚███║██║██║░╚███║███████╗{colors.purple}╚█████╔╝{colors.reset}
 {colors.white}╚═╝░░╚══╝╚═╝╚═╝░░╚══╝╚══════╝{colors.purple}░╚════╝░{colors.reset}
-         '''
 
+         '''
         return text
 
     def info():
-        information = [f"Welcome to {colors.bright_white}nine{colors.purple}6{colors.reset}!\n", "VER: Alpha 0.0.1\n", "[!]. Type --help for see all commands available"]
-
+        information = [f"Welcome to {colors.bright_white}nine{colors.purple}6{colors.reset}!\n", "VER: Alpha 0.0.1\n", "[!]. Type --help for see all available commands"]
         for i in information:
             print(i)
 
@@ -92,14 +74,26 @@ class func:
     def command(value):
         if value not in ['--help', '--guide']:
             print("Please only input available value!")
-
         if value == '--help':
             help = ["\n'cls' for clear screen", "'q' for exit"]
             for i in help:
                 print(i)
 
-
-func.clear()
+def smart_display(text):
+    parts = re.split(r'```(\w+)?\n?(.*?)```', text, flags=re.DOTALL)
+    i = 0
+    while i < len(parts):
+        content = parts[i]
+        if i % 3 == 0:
+            if content.strip():
+                typing_print(content)
+            i += 1
+        else:
+            lang = parts[i] if parts[i] else "python"
+            code_content = parts[i+1]
+            syntax = Syntax(code_content.strip(), lang, theme="monokai", line_numbers=False)
+            console.print(syntax)
+            i += 2
 
 def typing_print(text, delay=0.005):
     for char in text:
@@ -113,7 +107,7 @@ def load_memory():
         try:
             Path("memory.json").touch()
         except Exception as e:
-            print(f"Error occured(load_memory): {e}")
+            print(f"\nError occured(load_memory): {e}")
     if os.path.exists(MEMORY_FILE):
         try:
             with open(MEMORY_FILE, "r", encoding="utf-8") as f:
@@ -123,17 +117,23 @@ def load_memory():
     return []
 
 def save_memory(memory):
+    if not os.path.exists(MEMORY_FILE):
+        try:
+            with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+                json.dump(memory, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"Error occured[-1]: {e}")
     try:
         with open(MEMORY_FILE, "w", encoding="utf-8") as f:
             json.dump(memory, f, indent=2, ensure_ascii=False)
     except Exception as e:
-        print(f"Error occured[1]: {e}")
+        print(f"\nError occured[1]: {e}")
 
 def delete_memory():
-    if not os.path.exists(MEMORY_FILE):
-        print("No memory file detected!")
     if os.path.exists(MEMORY_FILE):
         os.remove(MEMORY_FILE)
+    else:
+        print("No memory file exists!")
 
 def prompt():
     try:
@@ -141,10 +141,9 @@ def prompt():
             content = f.read().strip()
             return content
     except Exception as e:
-        print(f"Error occured[2]: {e}")
-    
-def call_api(user, memory):
+        print(f"\nError occured[2]: {e}")
 
+def call_api(user, memory):
     header = {
         "Authorization": f"Bearer {api_key}",
         "HTTP-Referer": site_url,
@@ -161,15 +160,18 @@ def call_api(user, memory):
         "messages": messages
     }
 
-    response = requests.post(
-        url="https://openrouter.ai/api/v1/chat/completions",
-        headers=header,
-        json=data
-    )
+    with console.status(" Thinking...", spinner="dots"):
+        response = requests.post(
+            url="https://openrouter.ai/api/v1/chat/completions",
+            headers=header,
+            json=data
+        )
+    
     response.raise_for_status()
     return response.json()['choices'][0]['message']['content']
-    
+
 def main():
+    func.clear()
     memory = load_memory()
     print(func.text_display())
     func.info()
@@ -178,6 +180,7 @@ def main():
             user = input(f"\n{colors.red}@{colors.reset}> ")
 
             if user.lower() == 'q':
+                print(f"{colors.red}Exiting...{colors.reset}\n")
                 sys.exit(0)
 
             if user.lower() == 'cls':
@@ -196,22 +199,22 @@ def main():
 
             if not user.strip():
                 continue
-            
+
             response = call_api(user, memory)
 
             if response:
-                print("\nResponse: \n")
-                smart_display(response.replace("**", ""))
+                print(f"\n{colors.bright_white}Response:{colors.reset}\n")
+                cleaned_response = re.sub(r'\*\*|###', '', response)
+                smart_display(cleaned_response)
 
                 memory.append({"role": "user", "content": user})
                 memory.append({"role": "assistant", "content": response})
                 save_memory(memory)
             
         except Exception as e:
-            print(f"Error occured[3]: {e}")
+            print(f"\nError occured[3]: {e}")
         except KeyboardInterrupt:
             continue
 
 if __name__ == '__main__':
     main()
-    
