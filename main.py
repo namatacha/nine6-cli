@@ -43,23 +43,75 @@ class colors:
     bright_white = "\033[1;37m"
     reset = "\033[0m"
     bold = "\033[1m"
+    
+class symbol:
+    def warning():
+        sym_warn = f"{colors.yellow}[!]{colors.reset}"
+        return sym_warn
+    
+    def error():
+        sym_err = f"{colors.red}[-!]{colors.reset}"
+        return sym_err
+    
+    def asking():
+        sym_ask = f"{colors.blue}[?]{colors.reset}"
+        return sym_ask
+    
+class error:
+    def __init__(self):
+        self.api_error_msg = f"{colors.red}API_ERROR: {colors.reset}"
+        self.api_error_empty_msg = "Oops, your api key is empty, please get the api key at https://openrouter.ai/"
+        self.interrupt_msg = f"{colors.red}Interrupted!{colors.reset}"
+        
+    #----- API ERROR MESSAGES ------#
+        
+    def api_error(self):
+        try:
+            return self.api_error_msg
+        except Exception as e:
+            return f"{e}"
+        
+    def api_error_empty(self):
+        try:
+            return self.api_error_empty_msg
+        except Exception as e:
+            return f"{e}"
+        
+    #another
+    
+    def interrupt(self):
+        try:
+            return self.interrupt_msg
+        except Exception as e:
+            return f"{e}"
+        
+#call error class with var
+anerror = error()
 
 class func:
+    """
+    PROGRAM FUNCTION
+    """
     def text_display():
         text = f'''
-
-{colors.white}███╗░░██╗██╗███╗░░██╗███████╗{colors.purple}░█████╗░{colors.reset}
-{colors.white}████╗░██║██║████╗░██║██╔════╝{colors.purple}██╔═══╝░{colors.reset}
-{colors.white}██╔██╗██║██║██╔██╗██║█████╗{colors.purple}░░██████╗░{colors.reset}
-{colors.white}██║╚████║██║██║╚████║██╔══╝{colors.purple}░░██╔══██╗{colors.reset}
-{colors.white}██║░╚███║██║██║░╚███║███████╗{colors.purple}╚█████╔╝{colors.reset}
-{colors.white}╚═╝░░╚══╝╚═╝╚═╝░░╚══╝╚══════╝{colors.purple}░╚════╝░{colors.reset}
+        
+        {colors.white}███╗░░██╗██╗███╗░░██╗███████╗{colors.purple}░█████╗░{colors.reset}
+        {colors.white}████╗░██║██║████╗░██║██╔════╝{colors.purple}██╔═══╝░{colors.reset}
+        {colors.white}██╔██╗██║██║██╔██╗██║█████╗{colors.purple}░░██████╗░{colors.reset}
+        {colors.white}██║╚████║██║██║╚████║██╔══╝{colors.purple}░░██╔══██╗{colors.reset}
+        {colors.white}██║░╚███║██║██║░╚███║███████╗{colors.purple}╚█████╔╝{colors.reset}
+        {colors.white}╚═╝░░╚══╝╚═╝╚═╝░░╚══╝╚══════╝{colors.purple}░╚════╝░{colors.reset}
 
          '''
         return text
 
     def info():
-        information = [f"Welcome to {colors.bright_white}nine{colors.purple}6{colors.reset}!\n", "VER: Alpha 0.0.1\n", "[!]. Type --help for see all available commands"]
+        #This line contain the info displayed below the nine6 logo
+        information = [f"Welcome to {colors.bright_white}nine{colors.purple}6{colors.reset}!\n", 
+                       "VER: Alpha 0.3", 
+                       "Using openrouter api (https://openrouter.ai/)\n", 
+                       f"{symbol.warning()}. Type --help for see all available commands"]
+        
         for i in information:
             print(i)
 
@@ -72,12 +124,67 @@ class func:
         print(formatted_time)
 
     def command(value):
-        if value not in ['--help', '--guide']:
+        if value not in ['--help', 
+                         '--guide']:
             print("Please only input available value!")
+            
         if value == '--help':
-            help = ["\n'cls' for clear screen", "'q' for exit"]
+            help = ["\n'cls' for clear screen", 
+                    "'q' for exit\n", 
+                    "____*commands*_____", 
+                    "\n/reset - reset the ai memory", 
+                    "\n/run - to run program command"]
+            
             for i in help:
                 print(i)
+                
+    def run():
+        command = input("\nrun system command > ")
+        os.system(command)
+        
+    def debug(user, memory):
+        try:
+            if not api_key.strip():
+                print(f"{symbol.error()} {anerror.api_error()} {anerror.api_error_empty()}")
+            header = {
+                "Authorization": f"Bearer {api_key}",
+                "HTTP-Referer": site_url,
+                "X-Title": site_name,
+                "Content-Type": "application/json"
+                }
+            
+            messages = [{"role": "system", "content": prompt()}]
+            messages.extend(memory)
+            messages.append({"role": "user", "content": user})
+            
+            data = {
+                "model": model,
+                "messages": messages
+            }
+            
+            with console.status(" [DEBUG]Thinking...", spinner="dots"):
+                response = requests.post(
+                    url="https://openrouter.ai/api/v1/chat/completions",
+                    headers=header,
+                    json=data
+                )
+                
+                print(f"\n{colors.green}API:{colors.reset} {api_key[:20]}" if not api_key.strip() else f"\n{colors.red}API key was empty!{colors.reset}")
+                print(f"{colors.green}SITE_URL:{colors.reset} {site_url}")
+                print(f"{colors.green}SITE_NAME:{colors.reset} {site_name}")
+                print(f"{colors.green}USING MODEL:{colors.reset} {model}")
+                
+                response.raise_for_status()
+                return response.json()['choices'][0]['message']['content']
+            
+        except Exception as e:
+            print(f"{symbol.error()} Error occured[Debugged]:{colors.reset} {e}")
+        except KeyboardInterrupt:
+            print(f"{symbol.error()} {anerror.interrupt()}")
+            
+    def print_key():
+        key = api_key
+        print(f"\nYour api: {key[:20]}...")
 
 def smart_display(text):
     parts = re.split(r'```(\w+)?\n?(.*?)```', text, flags=re.DOTALL)
@@ -107,7 +214,7 @@ def load_memory():
         try:
             Path("memory.json").touch()
         except Exception as e:
-            print(f"\nError occured(load_memory): {e}")
+            print(f"\n{symbol.error()}. Error occured(load_memory): {e}")
     if os.path.exists(MEMORY_FILE):
         try:
             with open(MEMORY_FILE, "r", encoding="utf-8") as f:
@@ -122,18 +229,19 @@ def save_memory(memory):
             with open(MEMORY_FILE, "w", encoding="utf-8") as f:
                 json.dump(memory, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            print(f"Error occured[-1]: {e}")
+            print(f"{symbol.error}. Error occured[-1]: {e}")
     try:
         with open(MEMORY_FILE, "w", encoding="utf-8") as f:
             json.dump(memory, f, indent=2, ensure_ascii=False)
     except Exception as e:
-        print(f"\nError occured[1]: {e}")
+        print(f"\n{symbol.error()}. Error occured[1]: {e}")
 
 def delete_memory():
     if os.path.exists(MEMORY_FILE):
         os.remove(MEMORY_FILE)
+        print(f"{colors.green}Memory Cleared Successfuly!{colors.reset}")
     else:
-        print("No memory file exists!")
+        print(f"{symbol.warning()}. No memory file exists!")
 
 def prompt():
     try:
@@ -141,34 +249,43 @@ def prompt():
             content = f.read().strip()
             return content
     except Exception as e:
-        print(f"\nError occured[2]: {e}")
+        print(f"\n{symbol.error()}. Error occured[2]: {e}")
 
 def call_api(user, memory):
-    header = {
-        "Authorization": f"Bearer {api_key}",
-        "HTTP-Referer": site_url,
-        "X-Title": site_name,
-        "Content-Type": "application/json"
-    }
-
-    messages = [{"role": "system", "content": prompt()}]
-    messages.extend(memory)
-    messages.append({"role": "user", "content": user})
-
-    data = {
-        "model": model,
-        "messages": messages
-    }
-
-    with console.status(" Thinking...", spinner="dots"):
-        response = requests.post(
-            url="https://openrouter.ai/api/v1/chat/completions",
-            headers=header,
-            json=data
-        )
+    try:
+        if not api_key.strip():
+            print(f"\n{symbol.error()} {anerror.api_error()} {anerror.api_error_empty()}")
+            return
+        header = {
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": site_url,
+            "X-Title": site_name,
+            "Content-Type": "application/json"
+        }
+            
+        messages = [{"role": "system", "content": prompt()}]
+        messages.extend(memory)
+        messages.append({"role": "user", "content": user})
+        
+        data = {
+            "model": model,
+            "messages": messages
+            }
+        
+        with console.status(" Thinking...", spinner="dots"):
+            response = requests.post(
+                url="https://openrouter.ai/api/v1/chat/completions",
+                headers=header,
+                json=data
+            )
+            
+        response.raise_for_status()
+        return response.json()['choices'][0]['message']['content']
     
-    response.raise_for_status()
-    return response.json()['choices'][0]['message']['content']
+    except Exception as e:
+        print(f"{colors.red}{symbol.error()}{colors.reset}. Error Occured(call_api): {e}")
+    except KeyboardInterrupt:
+        print(f"{colors.red}{symbol.error()}{colors.reset}. Interrupted!")
 
 def main():
     func.clear()
@@ -178,6 +295,8 @@ def main():
     while True:
         try:
             user = input(f"\n{colors.red}@{colors.reset}> ")
+            
+            #basic command
 
             if user.lower() == 'q':
                 print(f"{colors.red}Exiting...{colors.reset}\n")
@@ -188,10 +307,36 @@ def main():
                 print(func.text_display())
                 func.info()
                 continue
+            
+            #slash command
+            
+            if user.lower() == '/debug':
+                user = input(f"{colors.green}@{colors.reset}> ")
+                response = func.debug(user, memory)
+                
+                if response:
+                    print(f"\n{colors.bright_white}Response[Debug]:{colors.reset}\n")
+                    cleaned_response = re.sub(r'\*\*|###', '', response)
+                    smart_display(cleaned_response)
+                    
+                    memory.append({"role": "user", "content": user})
+                    memory.append({"role": "assistant", "content": response})
+                    save_memory(memory)
+                continue
 
             if user.lower() == '/reset':
                 delete_memory()
                 continue
+            
+            if user.lower() == '/run':
+                func.run()
+                continue
+            
+            if user.lower() == '/key':
+                func.print_key()
+                continue
+            
+            #double strip command
 
             if user.lower() == '--help':
                 func.command(user)
@@ -199,6 +344,8 @@ def main():
 
             if not user.strip():
                 continue
+            
+            #response
 
             response = call_api(user, memory)
 
@@ -212,7 +359,7 @@ def main():
                 save_memory(memory)
             
         except Exception as e:
-            print(f"\nError occured[3]: {e}")
+            print(f"\n{symbol.error()}. Error occured[3]: {e}")
         except KeyboardInterrupt:
             continue
 
