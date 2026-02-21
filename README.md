@@ -4,13 +4,28 @@ Nine6 CLI is an opensource ai chatting program, and this program is CLI, so you 
 
 This program is still in alpha version, bugs may occurred.
 
+## Update logs
+- 21 February 2026 | Third version (alpha 0.0.3) released with lot of features and error catcher.
+- 20 February 2026 | Second version (alpha 0.0.2) released with more features.
+- 19 February 2026 | First version (alpha 0.0.1) released with core component (call api, get response).
+
 ## Features
+
+Released in alpha 0.0.2
 
 ⦿ Code Highlight
 
 ⦿ AI generated text is formatted into human readable text
 
 ⦿ AI thinking animation
+
+Released in alpha 0.0.3 (Newest)
+
+⦿ Error catching system
+
+⦿ Debugging
+
+⦿ Code structure updated
 
 More Features Coming Soon.
 
