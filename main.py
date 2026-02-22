@@ -1,4 +1,7 @@
 import re
+import termios
+import tty
+import shutil
 import requests
 import json
 import os
@@ -10,7 +13,15 @@ from datetime import datetime
 from datetime import timedelta
 from rich.console import Console
 from rich.syntax import Syntax
+from rich.panel import Panel
+from rich.live import Live
+from rich.control import Control
+from rich import box
 from pathlib import Path
+from prompt_toolkit import prompt
+from prompt_toolkit.styles import Style
+
+custom_style = Style.from_dict({'prompt': 'white'})
 
 console = Console()
 
@@ -89,9 +100,8 @@ class error:
 anerror = error()
 
 class func:
-    """
-    PROGRAM FUNCTION
-    """
+    """---------PROGRAM FUNCTION------------"""
+    
     def text_display():
         text = f'''
         
@@ -108,9 +118,8 @@ class func:
     def info():
         #This line contain the info displayed below the nine6 logo
         information = [f"Welcome to {colors.bright_white}nine{colors.purple}6{colors.reset}!\n", 
-                       "VER: Alpha 0.3", 
                        "Using openrouter api (https://openrouter.ai/)\n", 
-                       f"{symbol.warning()}. Type --help for see all available commands"]
+                       f"{symbol.warning()}. Type --help for see all available commands\n"]
         
         for i in information:
             print(i)
@@ -146,6 +155,7 @@ class func:
         try:
             if not api_key.strip():
                 print(f"{symbol.error()} {anerror.api_error()} {anerror.api_error_empty()}")
+                print('\n' * 2)
             header = {
                 "Authorization": f"Bearer {api_key}",
                 "HTTP-Referer": site_url,
@@ -208,13 +218,15 @@ def typing_print(text, delay=0.005):
         sys.stdout.flush()
         time.sleep(delay)
     print()
+    
+   #about memory
 
 def load_memory():
     if not os.path.exists(MEMORY_FILE):
         try:
             Path("memory.json").touch()
         except Exception as e:
-            print(f"\n{symbol.error()}. Error occured(load_memory): {e}")
+            print(f"\n{symbol.error()} Load Memory Error: {e}")
     if os.path.exists(MEMORY_FILE):
         try:
             with open(MEMORY_FILE, "r", encoding="utf-8") as f:
@@ -229,32 +241,36 @@ def save_memory(memory):
             with open(MEMORY_FILE, "w", encoding="utf-8") as f:
                 json.dump(memory, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            print(f"{symbol.error}. Error occured[-1]: {e}")
+            print(f"{symbol.error} Save Memory Error: {e}")
     try:
         with open(MEMORY_FILE, "w", encoding="utf-8") as f:
             json.dump(memory, f, indent=2, ensure_ascii=False)
     except Exception as e:
-        print(f"\n{symbol.error()}. Error occured[1]: {e}")
+        print(f"\n{symbol.error()} Save Memory Error: {e}")
 
 def delete_memory():
     if os.path.exists(MEMORY_FILE):
         os.remove(MEMORY_FILE)
         print(f"{colors.green}Memory Cleared Successfuly!{colors.reset}")
     else:
-        print(f"{symbol.warning()}. No memory file exists!")
+        print(f"{symbol.warning()} No memory file exists!")
+        
+    #Getting response
 
-def prompt():
+def get_prompt():
     try:
         with open(PROMPT, "r", encoding="utf-8") as f:
             content = f.read().strip()
             return content
     except Exception as e:
-        print(f"\n{symbol.error()}. Error occured[2]: {e}")
+        print(f"\n{symbol.error()} Prompt Error: {e}")
+        print('\n' * 2)
 
 def call_api(user, memory):
     try:
         if not api_key.strip():
             print(f"\n{symbol.error()} {anerror.api_error()} {anerror.api_error_empty()}")
+            print('\n' * 2)
             return
         header = {
             "Authorization": f"Bearer {api_key}",
@@ -263,7 +279,7 @@ def call_api(user, memory):
             "Content-Type": "application/json"
         }
             
-        messages = [{"role": "system", "content": prompt()}]
+        messages = [{"role": "system", "content": get_prompt()}]
         messages.extend(memory)
         messages.append({"role": "user", "content": user})
         
@@ -283,18 +299,92 @@ def call_api(user, memory):
         return response.json()['choices'][0]['message']['content']
     
     except Exception as e:
-        print(f"{colors.red}{symbol.error()}{colors.reset}. Error Occured(call_api): {e}")
+        print(f"{colors.red}{symbol.error()}{colors.reset} Error Calling API: {e}")
+        print('\n' * 2)
     except KeyboardInterrupt:
-        print(f"{colors.red}{symbol.error()}{colors.reset}. Interrupted!")
+        print(f"{colors.red}{symbol.error()}{colors.reset} Interrupted!")
+        print('\n' * 2)
+        
+def get_live_boxed_input():
+    user_input = ""
+    sys.stdout.write("\033[?25l")
+    
+    cols, rows = shutil.get_terminal_size()
+
+    sys.stdout.write(f"\033[1;{rows-3}r")
+    
+    while True:
+        cols, rows = shutil.get_terminal_size()
+
+        sys.stdout.write(f"\033[{rows-2};1H\033[J")
+        
+        input_panel = Panel(
+            f"> {user_input}█", 
+            border_style="white",
+            expand=True,
+            width=cols-1, 
+            padding=(0, 1),
+            box=box.SQUARE
+        )
+        
+        with console.capture() as capture:
+            console.print(input_panel, end="")
+        
+        sys.stdout.write(capture.get().strip('\n'))
+        sys.stdout.flush()
+
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            char = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+        if char == '\r': break
+        elif char in ('\x7f', '\x08'): user_input = user_input[:-1]
+        elif char == '\x03':
+
+            sys.stdout.write("\033[r\033[?25h\n")
+            sys.exit(0)
+        elif ord(char) >= 32: user_input += char
+
+    sys.stdout.write("\033[r") 
+    sys.stdout.write(f"\033[{rows-2};1H\033[J\033[?25h")
+    sys.stdout.flush()
+    return user_input
+
+def display_footer_info():
+    cols, _ = shutil.get_terminal_size()
+
+    mit_text = f"{colors.bright_white}MIT License © 2026 nine6 project. Feel free to fork & modify.{colors.reset}"
+    another_text = f"{colors.bright_white}Nine6 cli is still in alpha version, \n bugs may occur sometimes, contact m1stc@atomicmail.io to report bugs{colors.reset}"
+
+    status_line = (
+        f"{colors.cyan}●{colors.reset} Current version: Alpha 0.0.4\n"
+        f"{colors.cyan}●{colors.reset} Codename: Zen\n"
+        f"{colors.cyan}●{colors.reset} OS: {platform.system()} \n"
+        f"{colors.cyan}●{colors.reset} Arch: {platform.machine()} \n"
+        f"{colors.cyan}●{colors.reset} Logic: Trinity-AI \n"
+        f"{colors.cyan}●{colors.reset} Environment: Production\n"
+        f"{colors.cyan}●{colors.reset} Github: https://github.com/namatacha/nine6-cli\n"
+    )
+
+    print("\n") 
+    print(status_line)
+    print(another_text)
+    print('\n')
+    print(mit_text)
 
 def main():
     func.clear()
-    memory = load_memory()
     print(func.text_display())
     func.info()
+    display_footer_info()
+    memory = load_memory()
     while True:
         try:
-            user = input(f"\n{colors.red}@{colors.reset}> ")
+            user = get_live_boxed_input()
             
             #basic command
 
@@ -326,6 +416,7 @@ def main():
 
             if user.lower() == '/reset':
                 delete_memory()
+                print('\n'* 2)
                 continue
             
             if user.lower() == '/run':
@@ -334,12 +425,14 @@ def main():
             
             if user.lower() == '/key':
                 func.print_key()
+                print('\n' * 2)
                 continue
             
             #double strip command
 
             if user.lower() == '--help':
                 func.command(user)
+                print('\n' * 2)
                 continue
 
             if not user.strip():
@@ -348,18 +441,20 @@ def main():
             #response
 
             response = call_api(user, memory)
+            
 
             if response:
                 print(f"\n{colors.bright_white}Response:{colors.reset}\n")
                 cleaned_response = re.sub(r'\*\*|###', '', response)
                 smart_display(cleaned_response)
+                print('\n' * 2)
 
                 memory.append({"role": "user", "content": user})
                 memory.append({"role": "assistant", "content": response})
                 save_memory(memory)
             
         except Exception as e:
-            print(f"\n{symbol.error()}. Error occured[3]: {e}")
+            print(f"\n{symbol.error()} Error Occured[main()]: {e}")
         except KeyboardInterrupt:
             continue
 
